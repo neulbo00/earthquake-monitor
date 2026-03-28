@@ -632,42 +632,39 @@ async function loadData(){
       const fl=document.getElementById('flash');
       fl.classList.remove('on');void fl.offsetWidth;fl.classList.add('on');
     }
+    const isNewEq = prevId !== data[0].id;
     prevId=data[0].id;
-    // ══ 경보 판정 (M6.5 이상 or 진도4 이상) ══
-    const magNum = parseFloat(mag);
-    const ALERT_SCALES = {'5약':true,'5강':true,'6약':true,'6강':true,'7':true};
-    const isAlert = magNum >= 6.5 || ALERT_SCALES[sc];
-    const isWarn  = magNum >= 5.0 || sc === '4';
-
-    // 카드 강조
-    const card = document.getElementById('eq-card');
-    card.classList.toggle('alert-card', isAlert);
-    const locEl = document.getElementById('eq-loc');
-    locEl.classList.toggle('alert-loc', isAlert);
-
-    // 경보 오버레이·배너 (새 지진이고 알림 조건일 때만)
-    if(prevId !== data[0].id && isAlert){
-      const ov = document.getElementById('alert-overlay');
-      const bn = document.getElementById('alert-banner');
-      ov.classList.add('active');
-      bn.classList.add('active');
-      document.getElementById('alert-banner-text').textContent = magNum >= 6.5 ? '강진 발생!' : '진도' + sc + ' 경보';
-      document.getElementById('alert-banner-sub').textContent = locKr(h?.name||'') + '  M' + mag;
-      setTimeout(()=>{ov.classList.remove('active');bn.classList.remove('active');}, 8000);
-    }
-
-    // 진도 스펙트럼 바 업데이트
-    const SCALE_POS = {'1':6,'2':17,'3':28,'4':39,'5약':50,'5강':61,'6약':72,'6강':83,'7':96};
-    const needlePos = SCALE_POS[sc] ?? 0;
-    document.getElementById('spectrum-needle').style.left = needlePos + '%';
-    ['1','2','3','4','5약','5강','6약','6강','7'].forEach(k=>{
-      const el = document.getElementById('st-'+k.replace('약','l').replace('강','u'));
-      if(el) el.classList.toggle('active', k === sc);
-    });
 
     const eq=data[0].earthquake,h=eq?.hypocenter;
     const mag=h?.magnitude?h.magnitude.toFixed(1):'—';
     const sc=eq?.maxScale?(SM[String(eq.maxScale)]||'—'):'—';
+
+    // ══ 경보 판정 (M6.5 이상 or 진도 5약 이상) ══
+    const magNum = parseFloat(mag);
+    const ALERT_SCALES = {'5약':true,'5강':true,'6약':true,'6강':true,'7':true};
+    const isAlert = magNum >= 6.5 || ALERT_SCALES[sc];
+
+    // 카드 강조
+    document.getElementById('eq-card').classList.toggle('alert-card', isAlert);
+    document.getElementById('eq-loc').classList.toggle('alert-loc', isAlert);
+
+    // 경보 오버레이·배너 (새 지진이고 알림 조건일 때만)
+    if(isNewEq && isAlert){
+      const ov=document.getElementById('alert-overlay');
+      const bn=document.getElementById('alert-banner');
+      ov.classList.add('active'); bn.classList.add('active');
+      document.getElementById('alert-banner-text').textContent = magNum>=6.5 ? '강진 발생!' : '진도'+sc+' 경보';
+      document.getElementById('alert-banner-sub').textContent = locKr(h?.name||'')+'  M'+mag;
+      setTimeout(()=>{ov.classList.remove('active');bn.classList.remove('active');},8000);
+    }
+
+    // 진도 스펙트럼 바 업데이트
+    const SCALE_POS={'1':6,'2':17,'3':28,'4':39,'5약':50,'5강':61,'6약':72,'6강':83,'7':96};
+    document.getElementById('spectrum-needle').style.left=(SCALE_POS[sc]??0)+'%';
+    ['1','2','3','4','5약','5강','6약','6강','7'].forEach(k=>{
+      const el=document.getElementById('st-'+k.replace('약','l').replace('강','u'));
+      if(el) el.classList.toggle('active', k===sc);
+    });
     // 헤더
     const me=document.getElementById('h-mag');me.textContent=mag;me.className='hstat-val '+mc(parseFloat(mag));
     document.getElementById('h-shindo').textContent=sc;
