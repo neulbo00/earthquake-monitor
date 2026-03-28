@@ -1,1 +1,1 @@
-# earthquake-monitor
+# JAPAN earthquake-monitor
