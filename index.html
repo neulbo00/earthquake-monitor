@@ -631,7 +631,7 @@ async function loadData(){
       const fl=document.getElementById('flash');
       fl.classList.remove('on');void fl.offsetWidth;fl.classList.add('on');
     }
-    const isNewEq = prevId !== data[0].id;
+    const isNewEq = prevId !== null && prevId !== data[0].id;
     prevId=data[0].id;
 
     const eq=data[0].earthquake,h=eq?.hypocenter;
@@ -642,10 +642,6 @@ async function loadData(){
     const magNum = parseFloat(mag);
     const ALERT_SCALES = {'5약':true,'5강':true,'6약':true,'6강':true,'7':true};
     const isAlert = magNum >= 6.5 || ALERT_SCALES[sc];
-
-    // 카드 강조
-    document.getElementById('eq-card').classList.toggle('alert-card', isAlert);
-    document.getElementById('eq-loc').classList.toggle('alert-loc', isAlert);
 
     // 경보 오버레이·배너 (새 지진이고 알림 조건일 때만)
     if(isNewEq && isAlert){
