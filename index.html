@@ -161,49 +161,49 @@ body::before{content:'';position:fixed;inset:0;
 .legend-dot{width:12px;height:12px;border-radius:50%;}
 
 /* ══ 우측 패널 ══ */
-.panel-right{display:flex;flex-direction:column;gap:14px;}
+.panel-right{display:flex;flex-direction:column;gap:10px;min-height:0;}
 
 /* 지역별 진도 */
 .region-panel{
   background:var(--bg2);border:1px solid var(--border);border-radius:6px;
-  flex:1;overflow:hidden;display:flex;flex-direction:column;
+  flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;
 }
-.region-body{flex:1;overflow:hidden;padding:4px 0;}
+.region-body{flex:1;overflow:hidden;padding:2px 0;}
 .region-row{
   display:flex;align-items:center;justify-content:space-between;
-  padding:7px 18px;border-bottom:1px solid rgba(0,180,255,0.05);
+  padding:5px 16px;border-bottom:1px solid rgba(0,180,255,0.05);
 }
 .region-row:last-child{border-bottom:none;}
-.region-name{font-size:20px;color:var(--text);}
+.region-name{font-size:18px;color:var(--text);}
 .shindo-badge{
-  font-family:var(--font-d);font-size:22px;
-  width:44px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:4px;
+  font-family:var(--font-d);font-size:20px;
+  width:40px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:4px;
 }
 
 /* 진도 가이드 */
 .guide-panel{
   background:var(--bg2);border:1px solid var(--border);border-radius:6px;
-  padding:14px 18px;
+  padding:10px 14px;flex-shrink:0;
 }
-.guide-rows{display:flex;flex-direction:column;gap:4px;margin-top:4px;}
-.guide-row{display:grid;grid-template-columns:48px 1fr;align-items:center;gap:8px;}
+.guide-rows{display:flex;flex-direction:column;gap:3px;margin-top:4px;}
+.guide-row{display:grid;grid-template-columns:44px 1fr;align-items:center;gap:6px;}
 .guide-num{
-  font-family:var(--font-d);font-size:20px;height:36px;
-  display:flex;align-items:center;justify-content:center;border-radius:4px;flex-shrink:0;
+  font-family:var(--font-d);font-size:18px;height:32px;
+  display:flex;align-items:center;justify-content:center;border-radius:3px;flex-shrink:0;
 }
-.guide-track{height:36px;position:relative;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden;}
+.guide-track{height:32px;position:relative;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden;}
 .guide-fill{position:absolute;left:0;top:0;height:100%;border-radius:3px;}
-.guide-content{position:absolute;inset:0;display:flex;align-items:center;padding:0 10px;gap:8px;}
-.guide-icon{font-size:17px;line-height:1;flex-shrink:0;}
-.guide-text{font-size:14px;color:#fff;font-weight:500;white-space:nowrap;flex:1;overflow:hidden;text-overflow:ellipsis;}
-.guide-kr{font-size:13px;color:rgba(255,220,100,0.9);flex-shrink:0;white-space:nowrap;}
+.guide-content{position:absolute;inset:0;display:flex;align-items:center;padding:0 8px;gap:6px;}
+.guide-icon{font-size:15px;line-height:1;flex-shrink:0;}
+.guide-text{font-size:13px;color:#fff;font-weight:500;white-space:nowrap;flex:1;overflow:hidden;text-overflow:ellipsis;}
+.guide-kr{font-size:12px;color:rgba(255,220,100,0.9);flex-shrink:0;white-space:nowrap;}
 
 /* 세이스모 */
 .seismo-panel{
   background:var(--bg2);border:1px solid var(--border);border-radius:6px;
-  padding:14px 18px;height:110px;
+  padding:10px 14px;height:90px;flex-shrink:0;
 }
-.seismo-wrap{display:flex;align-items:flex-end;gap:4px;height:58px;margin-top:8px;}
+.seismo-wrap{display:flex;align-items:flex-end;gap:3px;height:48px;margin-top:6px;}
 .seismo-bar{flex:1;border-radius:2px 2px 0 0;opacity:.75;transition:height .3s ease;}
 
 /* ══ 티커 (상단 1행) ══ */
@@ -647,28 +647,108 @@ async function loadData(){
       return `<div class="eq-row fi"><div class="eq-row-mag ${mc(parseFloat(m))}">M${m}</div><div class="eq-row-loc">${locKr(dh?.name)}</div><div class="eq-row-time">${jst(d.time)}</div><div class="eq-row-depth">${dh?.depth?dh.depth+'km':'—'}</div></div>`;
     }).join('');
     document.getElementById('list-upd').textContent='갱신: '+new Date().toLocaleTimeString('ko-KR');
-    // 지역별 진도 - 현(県)·도(都)·부(府) 단위 그루핑 (중복 제거)
+    // 지역별 진도 — 시정촌 → 현 단위 변환 후 그루핑
     const pts=data[0].points||[];
     if(pts.length){
-      // 현급 이상 키만 사용 (시·구·정·촌 제외)
-      const PREF_ONLY_KEYS=LOC_KEYS.filter(k=>{
-        const v=LOC_MAP[k];
-        if(!v)return false;
-        // 현·도·부·도(道) 단위 + 앞바다·근해 등 지리명만
-        return k.includes('県')||k.includes('都')||k.includes('府')||k.includes('道')||
-               k.includes('沖')||k.includes('近海')||k.includes('地方')||k.includes('諸島')||
-               k.includes('半島')||k.includes('灘')||k.includes('列島')||k.includes('海')||
-               ['三陸','伊豆大島','能登','阿蘇','天草','奄美'].some(s=>k.includes(s));
-      });
+      // 시정촌명 → 현명 역방향 매핑 테이블
+      const CITY_TO_PREF={
+        '横浜':'가나가와현','横須賀':'가나가와현','鎌倉':'가나가와현','藤沢':'가나가와현',
+        '茅ヶ崎':'가나가와현','三浦':'가나가와현','大和':'가나가와현','海老名':'가나가와현',
+        '川崎':'가나가와현','相模原':'가나가와현','平塚':'가나가와현','小田原':'가나가와현',
+        '厚木':'가나가와현','座間':'가나가와현','綾瀬':'가나가와현','伊勢原':'가나가와현',
+        'さいたま':'사이타마현','川口':'사이타마현','所沢':'사이타마현','越谷':'사이타마현',
+        '川越':'사이타마현','熊谷':'사이타마현','上尾':'사이타마현','草加':'사이타마현',
+        '春日部':'사이타마현','狭山':'사이타마현','入間':'사이타마현','久喜':'사이타마현',
+        '千葉市':'치바현','船橋':'치바현','松戸':'치바현','市川':'치바현',
+        '柏':'치바현','習志野':'치바현','佐倉':'치바현','流山':'치바현',
+        '我孫子':'치바현','浦安':'치바현','市原':'치바현','八千代':'치바현',
+        '江戸川':'도쿄도','葛飾':'도쿄도','足立':'도쿄도','荒川':'도쿄도',
+        '墨田':'도쿄도','江東':'도쿄도','台東':'도쿄도','中央区':'도쿄도',
+        '千代田':'도쿄도','港区':'도쿄도','新宿':'도쿄도','渋谷':'도쿄도',
+        '世田谷':'도쿄도','目黒':'도쿄도','品川':'도쿄도','大田区':'도쿄도',
+        '杉並':'도쿄도','中野':'도쿄도','豊島':'도쿄도','北区':'도쿄도',
+        '板橋':'도쿄도','練馬':'도쿄도','文京':'도쿄도','新島':'도쿄도',
+        '八王子':'도쿄도','立川':'도쿄도','武蔵野':'도쿄도','三鷹':'도쿄도',
+        '仙台':'미야기현','石巻':'미야기현','塩竈':'미야기현','気仙沼':'미야기현',
+        '名取':'미야기현','多賀城':'미야기현','岩沼':'미야기현','登米':'미야기현',
+        '静岡市':'시즈오카현','浜松':'시즈오카현','沼津':'시즈오카현','富士':'시즈오카현',
+        '焼津':'시즈오카현','掛川':'시즈오카현','磐田':'시즈오카현','袋井':'시즈오카현',
+        '伊豆市':'시즈오카현','伊豆の国':'시즈오카현','熱海':'시즈오카현','三島':'시즈오카현',
+        '大月':'야마나시현','甲府':'야마나시현','富士吉田':'야마나시현',
+        '長野市':'나가노현','松本':'나가노현','上田':'나가노현','飯田':'나가노현',
+        '金沢':'이시카와현','七尾':'이시카와현','小松':'이시카와현','輪島':'이시카와현',
+        '名古屋':'아이치현','豊橋':'아이치현','岡崎':'아이치현','一宮':'아이치현',
+        '大阪市':'오사카부','堺':'오사카부','東大阪':'오사카부','豊中':'오사카부',
+        '神戸':'효고현','姫路':'효고현','尼崎':'효고현','明石':'효고현',
+        '京都市':'교토부','宇治':'교토부','亀岡':'교토부',
+        '奈良市':'나라현','橿原':'나라현','生駒':'나라현',
+        '盛岡':'이와테현','一関':'이와테현','奥州':'이와테현',
+        '秋田市':'아키타현','横手':'아키타현','大仙':'아키타현',
+        '山形市':'야마가타현','鶴岡':'야마가타현','酒田':'야마가타현',
+        '福島市':'후쿠시마현','郡山':'후쿠시마현','いわき':'후쿠시마현',
+        '水戸':'이바라키현','つくば':'이바라키현','日立':'이바라키현','土浦':'이바라키현',
+        '宇都宮':'도치기현','小山':'도치기현','栃木市':'도치기현',
+        '前橋':'군마현','高崎':'군마현','桐生':'군마현',
+        '新潟市':'니가타현','長岡':'니가타현','上越':'니가타현',
+        '富山市':'도야마현','高岡':'도야마현','射水':'도야마현',
+        '福井市':'후쿠이현','敦賀':'후쿠이현','越前':'후쿠이현',
+        '岐阜市':'기후현','大垣':'기후현','高山':'기후현',
+        '津市':'미에현','四日市':'미에현','鈴鹿':'미에현',
+        '大津':'시가현','草津市':'시가현','彦根':'시가현',
+        '和歌山市':'와카야마현','田辺':'와카야마현','新宮':'와카야마현',
+        '鳥取市':'돗토리현','米子':'돗토리현','倉吉':'돗토리현',
+        '松江':'시마네현','出雲':'시마네현','浜田':'시마네현',
+        '岡山市':'오카야마현','倉敷':'오카야마현','津山':'오카야마현',
+        '広島市':'히로시마현','福山':'히로시마현','呉':'히로시마현',
+        '山口市':'야마구치현','下関':'야마구치현','宇部':'야마구치현',
+        '徳島市':'도쿠시마현','鳴門':'도쿠시마현',
+        '高松':'가가와현','丸亀':'가가와현','坂出':'가가와현',
+        '松山':'에히메현','今治':'에히메현','新居浜':'에히메현',
+        '高知市':'고치현','南国':'고치현',
+        '福岡市':'후쿠오카현','北九州':'후쿠오카현','久留米':'후쿠오카현',
+        '佐賀市':'사가현','唐津':'사가현',
+        '長崎市':'나가사키현','佐世保':'나가사키현','諫早':'나가사키현',
+        '熊本市':'구마모토현','八代':'구마모토현','天草':'구마모토현',
+        '大分市':'오이타현','別府':'오이타현','中津':'오이타현',
+        '宮崎市':'미야자키현','都城':'미야자키현','延岡':'미야자키현',
+        '鹿児島市':'가고시마현','霧島':'가고시마현','薩摩川内':'가고시마현',
+        '那覇':'오키나와현','沖縄市':'오키나와현','うるま':'오키나와현',
+        '中井町':'가나가와현','二宮町':'가나가와현','大磯町':'가나가와현',
+        '寒川町':'가나가와현','愛川町':'가나가와현','清川村':'가나가와현',
+      };
+
+      // 주소에서 현명 추출 함수
+      function addrToPref(addr){
+        if(!addr) return null;
+        // 1) LOC_MAP에서 현급 직접 매칭
+        for(const k of LOC_KEYS){
+          if((k.includes('県')||k.includes('都')||k.includes('府')||k.includes('道'))
+              && addr.includes(k)) return LOC_MAP[k];
+        }
+        // 2) CITY_TO_PREF 역방향 매핑
+        for(const [city, pref] of Object.entries(CITY_TO_PREF)){
+          if(addr.includes(city)) return pref;
+        }
+        // 3) 시(市)·정(町)·구(区) 단위 추출해서 시 단위로 그루핑
+        // 일본 주소는 보통 "都市名区町名" 형태 → 앞에서 시(市)/구(区) 단위까지만 추출
+        const mCity = addr.match(/^(.+?[市区町村])/);
+        if(mCity) {
+          // 그 시/구를 LOC_MAP에서 한글로 변환 시도
+          const cityKey = mCity[1];
+          for(const k of LOC_KEYS){
+            if(cityKey.includes(k)&&LOC_MAP[k]) return LOC_MAP[k]+'('+cityKey+')';
+          }
+          return cityKey; // 변환 안 되면 원문 시명 사용
+        }
+        return locKr(addr);
+      }
+
       const pm={};
       pts.forEach(r=>{
-        if(!r.addr||!r.scale)return;
-        let pk=null;
-        for(const k of PREF_ONLY_KEYS){
-          if(r.addr.includes(k)&&LOC_MAP[k]){pk=LOC_MAP[k];break;}
-        }
-        if(!pk)return;
-        if(!pm[pk]||r.scale>pm[pk])pm[pk]=r.scale;
+        if(!r.addr||!r.scale) return;
+        const pk = addrToPref(r.addr);
+        if(!pk) return;
+        if(!pm[pk]||r.scale>pm[pk]) pm[pk]=r.scale;
       });
       const sorted=Object.entries(pm).sort((a,b)=>b[1]-a[1]).slice(0,11);
       document.getElementById('region-list').innerHTML=sorted.map(([name,scale])=>{
