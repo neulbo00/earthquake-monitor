@@ -823,7 +823,7 @@ function startBgMusic() {
   if (!audioCtx || bgMusicNode) return;
 
   const masterGain = audioCtx.createGain();
-  masterGain.gain.setValueAtTime(0.15, audioCtx.currentTime); // 볼륨 15%
+  masterGain.gain.setValueAtTime(0.25, audioCtx.currentTime); // 볼륨 25%
   masterGain.connect(audioCtx.destination);
   bgGainNode = masterGain;
 
