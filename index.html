@@ -256,6 +256,20 @@ body::before{content:'';position:fixed;inset:0;
 .fi{animation:fadeIn .4s ease forwards;}
 @keyframes pipRing{0%{r:6;opacity:.8;stroke-width:1.5}100%{r:24;opacity:0;stroke-width:.5}}
 @keyframes epiRing{0%{r:9;opacity:.8;stroke-width:2}100%{r:30;opacity:0;stroke-width:.5}}
+
+/* ══ TTS 자막 오버레이 ══ */
+.tts-subtitle{
+  display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  z-index:1001;text-align:center;pointer-events:none;
+  background:rgba(0,0,0,0.85);border:2px solid var(--accent);
+  border-radius:8px;padding:18px 36px;min-width:700px;max-width:1500px;
+  backdrop-filter:blur(6px);
+}
+.tts-subtitle.active{display:block;animation:subIn .3s ease-out;}
+@keyframes subIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.sub-kr{font-family:var(--font-b);font-size:34px;font-weight:700;color:#fff;line-height:1.4;margin-bottom:6px;}
+.sub-jp{font-family:var(--font-b);font-size:26px;color:rgba(255,255,255,0.78);line-height:1.4;}
+.sub-count{font-family:var(--font-m);font-size:14px;color:var(--accent);margin-top:10px;letter-spacing:3px;}
 </style>
 </head>
 <body>
@@ -264,6 +278,11 @@ body::before{content:'';position:fixed;inset:0;
 <div class="alert-banner" id="alert-banner">
   <div class="alert-banner-text" id="alert-banner-text">강진 경보</div>
   <div class="alert-banner-sub" id="alert-banner-sub">—</div>
+</div>
+<div class="tts-subtitle" id="tts-subtitle">
+  <div class="sub-kr" id="sub-kr">—</div>
+  <div class="sub-jp" id="sub-jp">—</div>
+  <div class="sub-count" id="sub-count"></div>
 </div>
 
 <div class="layout">
@@ -651,8 +670,10 @@ async function loadData(){
       document.getElementById('alert-banner-text').textContent = magNum>=6.5 ? '강진 발생!' : '진도'+sc+' 경보';
       document.getElementById('alert-banner-sub').textContent = locKr(h?.name||'')+'  M'+mag;
       setTimeout(()=>{ov.classList.remove('active');bn.classList.remove('active');},8000);
-      // 경보음 재생
-      if(audioCtx) playAlertSound(magNum>=6.5 ? 'critical' : 'warning');
+      // 경보음 + TTS + 자막
+      const level = magNum>=6.5 ? 'critical' : 'warning';
+      const timeStr = jst(data[0].time);
+      if(audioCtx) triggerAlert(level, locKr(h?.name||'불명'), mag, sc, timeStr);
     }
 
     // 진도 스펙트럼 바 업데이트
@@ -893,35 +914,111 @@ function playAlertSound(level) {
 
   const gain = audioCtx.createGain();
   gain.connect(audioCtx.destination);
-  gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
 
   if (level === 'critical') {
-    // M6.5 이상: 강한 사이렌 3회
-    [0, 0.6, 1.2].forEach(delay => {
+    // M6.5 이상: 강한 사이렌 3회 (0초, 0.7초, 1.4초)
+    [0, 0.7, 1.4].forEach(delay => {
       const osc = audioCtx.createOscillator();
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(880, audioCtx.currentTime + delay);
-      osc.frequency.linearRampToValueAtTime(440, audioCtx.currentTime + delay + 0.5);
+      osc.frequency.linearRampToValueAtTime(440, audioCtx.currentTime + delay + 0.55);
       osc.connect(gain);
       osc.start(audioCtx.currentTime + delay);
-      osc.stop(audioCtx.currentTime + delay + 0.5);
+      osc.stop(audioCtx.currentTime + delay + 0.55);
     });
   } else {
-    // 진도 5약 이상: 주의 알림음 2회
-    [0, 0.5].forEach(delay => {
+    // 진도 5약 이상: 주의 알림음 3회 (0초, 0.55초, 1.1초)
+    [0, 0.55, 1.1].forEach(delay => {
       const osc = audioCtx.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(660, audioCtx.currentTime + delay);
-      osc.frequency.linearRampToValueAtTime(880, audioCtx.currentTime + delay + 0.3);
+      osc.frequency.linearRampToValueAtTime(880, audioCtx.currentTime + delay + 0.35);
       osc.connect(gain);
       osc.start(audioCtx.currentTime + delay);
-      osc.stop(audioCtx.currentTime + delay + 0.35);
+      osc.stop(audioCtx.currentTime + delay + 0.4);
     });
   }
 
-  // 3초 후 페이드아웃
-  gain.gain.setValueAtTime(0.4, audioCtx.currentTime + 2);
-  gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
+  // 페이드아웃 (경보음 종료 후)
+  const endTime = level === 'critical' ? 1.4 + 0.55 : 1.1 + 0.4;
+  gain.gain.setValueAtTime(0.5, audioCtx.currentTime + endTime);
+  gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + endTime + 0.3);
+}
+
+// ── TTS + 자막 시스템 ──────────────────────────────
+function speakAndSubtitle(krText, jpText, level) {
+  if (!window.speechSynthesis) return;
+
+  // 경보음 종료 후 TTS 시작 대기
+  // critical: 3회 × (0.7초 간격 + 0.55초) = 마지막 음 1.95초 끝 → 2200ms 후 시작
+  // warning:  3회 × (0.55초 간격 + 0.40초) = 마지막 음 1.50초 끝 → 1800ms 후 시작
+  const ttsStartDelay = level === 'critical' ? 2200 : 1800;
+
+  const sub  = document.getElementById('tts-subtitle');
+  const subKr = document.getElementById('sub-kr');
+  const subJp = document.getElementById('sub-jp');
+  const subCnt = document.getElementById('sub-count');
+  if (!sub) return;
+
+  let repeatCount = 0;
+  const MAX_REPEAT = 3;
+
+  function speak() {
+    if (repeatCount >= MAX_REPEAT) {
+      sub.classList.remove('active');
+      return;
+    }
+    repeatCount++;
+
+    // 자막 업데이트
+    subKr.textContent = krText;
+    subJp.textContent = jpText;
+    subCnt.textContent = `${repeatCount} / ${MAX_REPEAT}`;
+    sub.classList.add('active');
+
+    // 한국어 TTS
+    const krUtter = new SpeechSynthesisUtterance(krText);
+    krUtter.lang = 'ko-KR';
+    krUtter.rate = 0.88;
+    krUtter.pitch = 1.0;
+    krUtter.volume = 1.0;
+
+    // 일본어 TTS
+    const jpUtter = new SpeechSynthesisUtterance(jpText);
+    jpUtter.lang = 'ja-JP';
+    jpUtter.rate = 0.88;
+    jpUtter.pitch = 1.0;
+    jpUtter.volume = 1.0;
+
+    // 한국어 끝 → 일본어
+    krUtter.onend = () => {
+      setTimeout(() => window.speechSynthesis.speak(jpUtter), 400);
+    };
+    // 일본어 끝 → 다음 반복 (0.8초 간격)
+    jpUtter.onend = () => {
+      setTimeout(speak, 800);
+    };
+
+    window.speechSynthesis.speak(krUtter);
+  }
+
+  setTimeout(speak, ttsStartDelay);
+}
+
+// ── 경보 통합 발동 함수 ────────────────────────────
+function triggerAlert(level, locName, mag, sc, timeStr) {
+  // TTS 문구 (발생 시각 포함)
+  let krText, jpText;
+  if (level === 'critical') {
+    krText = `긴급! 일본 강진 발생. ${timeStr}. ${locName}, 규모 ${mag}.`;
+    jpText = `緊急！日本で強い地震が発生しました。${timeStr}。${locName}、マグニチュード${mag}。`;
+  } else {
+    krText = `지진 경보. ${timeStr}. ${locName}, 진도 ${sc}, 규모 ${mag}.`;
+    jpText = `地震警報。${timeStr}。${locName}、震度${sc}、マグニチュード${mag}。`;
+  }
+  playAlertSound(level);
+  speakAndSubtitle(krText, jpText, level);
 }
 
 // ── 페이지 클릭 시 오디오 시작 (브라우저 정책 대응) ──
