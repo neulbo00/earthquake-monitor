@@ -1,0 +1,39 @@
+{
+  "nuclear": [
+    {"name":"泊原発","name_kr":"토마리 원전","lat":43.035,"lon":140.507,"status":"停止中","operator":"北海道電力","pref":"北海道"},
+    {"name":"東通原発(東北)","name_kr":"히가시도오리 원전(도호쿠)","lat":41.188,"lon":141.393,"status":"停止中","operator":"東北電力","pref":"青森県"},
+    {"name":"東通原発(東電)","name_kr":"히가시도오리 원전(도쿄)","lat":41.182,"lon":141.388,"status":"建設中","operator":"東京電力","pref":"青森県"},
+    {"name":"女川原発","name_kr":"오나가와 원전","lat":38.407,"lon":141.510,"status":"再稼働","operator":"東北電力","pref":"宮城県"},
+    {"name":"福島第一原発","name_kr":"후쿠시마 제1원전","lat":37.421,"lon":141.033,"status":"廃炉","operator":"東京電力","pref":"福島県"},
+    {"name":"福島第二原発","name_kr":"후쿠시마 제2원전","lat":37.316,"lon":141.025,"status":"廃炉","operator":"東京電力","pref":"福島県"},
+    {"name":"柏崎刈羽原発","name_kr":"가시와자키카리와 원전","lat":37.425,"lon":138.598,"status":"審査中","operator":"東京電力","pref":"新潟県"},
+    {"name":"東海第二原発","name_kr":"도카이 제2원전","lat":36.467,"lon":140.607,"status":"審査中","operator":"日本原電","pref":"茨城県"},
+    {"name":"浜岡原発","name_kr":"하마오카 원전","lat":34.623,"lon":138.143,"status":"停止中","operator":"中部電力","pref":"静岡県"},
+    {"name":"志賀原発","name_kr":"시카 원전","lat":37.049,"lon":136.713,"status":"停止中","operator":"北陸電力","pref":"石川県"},
+    {"name":"美浜原発","name_kr":"미하마 원전","lat":35.546,"lon":135.989,"status":"再稼働","operator":"関西電力","pref":"福井県"},
+    {"name":"大飯原発","name_kr":"오이 원전","lat":35.541,"lon":135.658,"status":"再稼働","operator":"関西電力","pref":"福井県"},
+    {"name":"高浜原発","name_kr":"다카하마 원전","lat":35.526,"lon":135.508,"status":"再稼働","operator":"関西電力","pref":"福井県"},
+    {"name":"敦賀原発","name_kr":"쓰루가 원전","lat":35.695,"lon":136.057,"status":"廃炉審査","operator":"日本原電","pref":"福井県"},
+    {"name":"島根原発","name_kr":"시마네 원전","lat":35.536,"lon":132.994,"status":"再稼働","operator":"中国電力","pref":"島根県"},
+    {"name":"伊方原発","name_kr":"이카타 원전","lat":33.493,"lon":132.319,"status":"再稼働","operator":"四国電力","pref":"愛媛県"},
+    {"name":"玄海原発","name_kr":"겐카이 원전","lat":33.514,"lon":129.858,"status":"再稼働","operator":"九州電力","pref":"佐賀県"},
+    {"name":"川内原発","name_kr":"센다이 원전","lat":31.838,"lon":130.190,"status":"再稼働","operator":"九州電力","pref":"鹿児島県"}
+  ],
+  "thermal": [
+    {"name":"苫東厚真火力","name_kr":"도마토아쓰마 화력","lat":42.539,"lon":141.921,"fuel":"石炭","operator":"北海道電力","pref":"北海道"},
+    {"name":"鹿島火力","name_kr":"가시마 화력","lat":35.969,"lon":140.655,"fuel":"LNG/石油","operator":"東京電力","pref":"茨城県"},
+    {"name":"横須賀火力","name_kr":"요코스카 화력","lat":35.273,"lon":139.677,"fuel":"石炭","operator":"JERA","pref":"神奈川県"},
+    {"name":"横浜火力","name_kr":"요코하마 화력","lat":35.463,"lon":139.656,"fuel":"LNG","operator":"JERA","pref":"神奈川県"},
+    {"name":"姉崎火力","name_kr":"아네사키 화력","lat":35.523,"lon":140.040,"fuel":"LNG","operator":"JERA","pref":"千葉県"},
+    {"name":"千葉火力","name_kr":"지바 화력","lat":35.570,"lon":140.060,"fuel":"LNG","operator":"JERA","pref":"千葉県"},
+    {"name":"富津火力","name_kr":"후쓰 화력","lat":35.336,"lon":139.855,"fuel":"LNG","operator":"JERA","pref":"千葉県"},
+    {"name":"碧南火力","name_kr":"헤키난 화력","lat":34.868,"lon":137.012,"fuel":"石炭","operator":"中部電力","pref":"愛知県"},
+    {"name":"知多火力","name_kr":"지타 화력","lat":34.954,"lon":136.891,"fuel":"LNG","operator":"中部電力","pref":"愛知県"},
+    {"name":"新舞子火力","name_kr":"신마이코 화력","lat":34.988,"lon":136.922,"fuel":"LNG","operator":"JERA","pref":"愛知県"},
+    {"name":"姫路第二火力","name_kr":"히메지 제2화력","lat":34.848,"lon":134.683,"fuel":"LNG","operator":"関西電力","pref":"兵庫県"},
+    {"name":"新大阪火力","name_kr":"신오사카 화력","lat":34.725,"lon":135.495,"fuel":"LNG","operator":"関西電力","pref":"大阪府"},
+    {"name":"橘湾火力","name_kr":"다치바나완 화력","lat":33.984,"lon":134.583,"fuel":"石炭","operator":"電源開発","pref":"徳島県"},
+    {"name":"松浦火力","name_kr":"마쓰우라 화력","lat":33.370,"lon":129.710,"fuel":"石炭","operator":"電源開発","pref":"長崎県"},
+    {"name":"竹原火力","name_kr":"다케하라 화력","lat":34.352,"lon":132.919,"fuel":"石炭","operator":"中国電力","pref":"広島県"}
+  ]
+}
