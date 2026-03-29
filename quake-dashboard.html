@@ -1015,7 +1015,7 @@ function exportCSV(){
 // ── 통계 탭 ──
 async function loadStatsData(){
   try{
-    const raw=await loadDataSmart(500);
+    const raw=await loadDataSmart(100);
 
     const now=Date.now();
     const d24h=raw.filter(q=>{try{return now-new Date(q.earthquake?.time||q.time)<86400000;}catch(e){return false;}});
@@ -1226,7 +1226,9 @@ let dashMapOk=false, dashSvg=null, dashProj=null;
 function mcol(m){if(m>=5)return'#ff2d2d';if(m>=4)return'#ff8c00';if(m>=3)return'#fac775';return'#378add';}
 
 async function initDashMap(){
-  if(dashMapOk) { renderDashMap(); return; }
+  // 데이터 먼저 로드
+  const mapData = await loadDataSmart(100);
+  if(dashMapOk){ renderDashMap(mapData); return; }
   try{
     const el=document.getElementById('dash-map');
     const W=el.clientWidth||700, H=el.clientHeight||560;
@@ -1238,7 +1240,7 @@ async function initDashMap(){
       .attr('class','land').attr('d',d3.geoPath(dashProj))
       .attr('fill','#0d1a24').attr('stroke','rgba(0,180,255,0.25)').attr('stroke-width','0.7');
     dashMapOk=true;
-    renderDashMap();
+    renderDashMap(mapData);
   }catch(e){console.error('지도 로드 실패',e);}
 }
 
@@ -1248,8 +1250,9 @@ function renderDashMap(data){
   const tooltip=document.getElementById('map-tooltip');
   const svgEl=document.getElementById('dash-map');
 
-  const src = data || (accumulatedData && accumulatedData.length ? accumulatedData : allData).slice(0,100);
-  const valid=src.filter(q=>q.earthquake?.hypocenter?.latitude&&q.earthquake?.hypocenter?.longitude);
+  if(!data||!data.length){ console.log('[지도] 데이터 없음'); return; }
+  const src = data.slice(0,100);
+  const valid=src.filter(q=>q.earthquake?.hypocenter?.latitude&&q.earthquake?.hypocenter?.longitude&&q.earthquake.hypocenter.latitude!==0);
 
   valid.forEach((q,i)=>{
     const h=q.earthquake.hypocenter;
@@ -1289,6 +1292,7 @@ function renderDashMap(data){
   });
 
   // 이력 목록 렌더
+  _mapItems = valid.slice(0,30); // zoomToItem에서 참조
   const listEl=document.getElementById('map-eq-list');
   document.getElementById('map-list-count').textContent=valid.length+'건';
   const SM={'10':'1','20':'2','30':'3','40':'4','45':'5약','50':'5강','55':'6약','60':'6강','70':'7'};
@@ -1312,9 +1316,9 @@ function renderDashMap(data){
 
 let _mapItems=[];
 function zoomToItem(i){
-  const valid=(accumulatedData && accumulatedData.length ? accumulatedData : allData).filter(q=>q.earthquake?.hypocenter?.latitude&&q.earthquake?.hypocenter?.longitude&&q.earthquake.hypocenter.latitude!==0&&q.earthquake.hypocenter.longitude!==0);
-  if(!valid[i])return;
-  const q=valid[i];
+  // _mapItems는 renderDashMap에서 채워짐
+  const q=_mapItems[i];
+  if(!q||!dashProj)return;
   const h=q.earthquake.hypocenter;
   const [x,y]=dashProj([h.longitude,h.latitude]);
   zoomToEpicenter(q,h,x,y);
