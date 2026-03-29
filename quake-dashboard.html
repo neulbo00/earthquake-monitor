@@ -397,14 +397,14 @@ input[type="range"]::-webkit-slider-thumb {
 
   <!-- 탭 네비게이션 -->
   <nav class="nav-tabs">
-    <button class="nav-tab active" onclick="switchTab('search')">🔍 데이터 검색</button>
-    <button class="nav-tab" onclick="switchTab('map')">🗾 지진 지도</button>
+    <button class="nav-tab active" onclick="switchTab('map')">🗾 지진 지도</button>
     <button class="nav-tab" onclick="switchTab('stats')">📊 통계 분석</button>
+    <button class="nav-tab" onclick="switchTab('search')">🔍 데이터 검색</button>
     <button class="nav-tab" onclick="switchTab('settings')">⚙️ 설정</button>
   </nav>
 
   <!-- ══ 지도 탭 ══ -->
-  <div id="tab-map" class="tab-content">
+  <div id="tab-map" class="tab-content active">
     <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;min-height:680px;">
       <!-- 지도 -->
       <div class="panel" style="padding:0;overflow:hidden;position:relative;display:flex;flex-direction:column;">
@@ -432,7 +432,7 @@ input[type="range"]::-webkit-slider-thumb {
   </div>
 
   <!-- ══ 검색 탭 ══ -->
-  <div id="tab-search" class="tab-content active">
+  <div id="tab-search" class="tab-content">
     <div class="panel" style="margin-bottom:16px;">
       <div class="panel-title">검색 필터</div>
       <div class="filter-grid">
@@ -762,7 +762,7 @@ let charts = {};
 // ── 탭 전환 ──
 function switchTab(id) {
   document.querySelectorAll('.nav-tab').forEach((t,i)=>{
-    t.classList.toggle('active', ['search','map','stats','settings'][i]===id);
+    t.classList.toggle('active', ['map','stats','search','settings'][i]===id);
   });
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
@@ -1234,12 +1234,16 @@ async function initDashMap(){
     const W=el.clientWidth||700, H=el.clientHeight||560;
     const tp=await d3.json('https://cdn.jsdelivr.net/npm/datamaps@0.5.10/src/js/data/jpn.topo.json');
     dashSvg=d3.select('#dash-map').attr('viewBox',`0 0 ${W} ${H}`);
-    dashProj=d3.geoMercator().center([137.5,37]).scale(W*2.1).translate([W*0.42,H*0.5]);
+    dashProj=d3.geoMercator().center([136.0,36.5]).scale(W*2.4).translate([W*0.45,H*0.52]);
     dashSvg.selectAll('path.land')
       .data(topojson.feature(tp,tp.objects.jpn).features).join('path')
       .attr('class','land').attr('d',d3.geoPath(dashProj))
       .attr('fill','#0d1a24').attr('stroke','rgba(0,180,255,0.25)').attr('stroke-width','0.7');
     dashMapOk=true;
+    // 지도 배경 클릭 시 줌 복귀
+    dashSvg.on('click', function(event){
+      if(event.target.tagName === 'path') resetZoom();
+    });
     renderDashMap(mapData);
   }catch(e){console.error('지도 로드 실패',e);}
 }
@@ -1327,7 +1331,6 @@ function zoomToItem(i){
 let zoomed=false;
 function zoomToEpicenter(q,h,x,y){
   if(!dashSvg||!dashProj)return;
-  // 부드러운 줌인 (D3 zoom 없이 viewBox 변환)
   const el=document.getElementById('dash-map');
   const W=el.clientWidth||700, H=el.clientHeight||560;
   const scale=3.5;
@@ -1335,12 +1338,14 @@ function zoomToEpicenter(q,h,x,y){
   const vw=W/scale, vh=H/scale;
   dashSvg.transition().duration(700).attr('viewBox',`${vx} ${vy} ${vw} ${vh}`);
   zoomed=true;
+}
 
-  // 2.5초 후 원래대로 복귀
-  setTimeout(()=>{
-    dashSvg.transition().duration(500).attr('viewBox',`0 0 ${W} ${H}`);
-    zoomed=false;
-  },3000);
+function resetZoom(){
+  if(!zoomed||!dashSvg)return;
+  const el=document.getElementById('dash-map');
+  const W=el.clientWidth||700, H=el.clientHeight||560;
+  dashSvg.transition().duration(500).attr('viewBox',`0 0 ${W} ${H}`);
+  zoomed=false;
 }
 
 const ssMap=document.createElement('style');
@@ -1352,6 +1357,7 @@ window.addEventListener('load',()=>{
   loadSettings();
   setupAutoRefresh(60);
   loadAccumulated(); // 축적 데이터 백그라운드 로드
+  initDashMap();     // 기본 탭이 지도이므로 바로 로드
   // 초기 테이블 안내
   document.getElementById('search-tbody').innerHTML='<tr class="empty-row"><td colspan="5">검색 버튼을 눌러주세요</td></tr>';
   document.getElementById('search-loader').style.display='none';
