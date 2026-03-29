@@ -86,6 +86,10 @@ body::after {
 #last-update { color: var(--accent2); }
 
 /* ── 탭 네비게이션 ── */
+.layer-btn{font-family:var(--font-m);font-size:11px;letter-spacing:1px;padding:4px 10px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .2s;}
+.layer-btn:hover{border-color:var(--accent);color:var(--accent);}
+.layer-btn.active{background:rgba(0,180,255,0.15);border-color:var(--accent);color:var(--accent);}
+
 .nav-tabs {
   display: flex; gap: 4px; margin-bottom: 24px;
   border-bottom: 1px solid var(--border);
@@ -408,16 +412,31 @@ input[type="range"]::-webkit-slider-thumb {
     <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;min-height:680px;">
       <!-- 지도 -->
       <div class="panel" style="padding:0;overflow:hidden;position:relative;display:flex;flex-direction:column;">
-        <div class="panel-title" style="padding:14px 20px 10px;">진원지 분포 지도</div>
-        <div style="flex:1;position:relative;min-height:0;">
-          <svg id="dash-map" style="width:100%;height:100%;min-height:560px;display:block;"></svg>
-          <div id="map-tooltip" style="position:absolute;display:none;background:rgba(4,6,8,0.92);border:1px solid rgba(0,180,255,0.4);border-radius:5px;padding:8px 12px;pointer-events:none;z-index:20;font-family:var(--font-b);min-width:180px;"></div>
+        <!-- 헤더: 타이틀 + 레이어 토글 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;border-bottom:1px solid var(--border);flex-shrink:0;">
+          <div class="panel-title" style="padding:0;margin:0;">진원지 분포 지도</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span style="font-family:var(--font-m);font-size:11px;color:var(--text2);letter-spacing:1px;">레이어:</span>
+            <button onclick="toggleLayer('quake')"    id="btn-quake"    class="layer-btn active">진원지</button>
+            <button onclick="toggleLayer('hist')"     id="btn-hist"     class="layer-btn active">과거진도7↑</button>
+            <button onclick="toggleLayer('nuclear')"  id="btn-nuclear"  class="layer-btn">원전</button>
+            <button onclick="toggleLayer('thermal')"  id="btn-thermal"  class="layer-btn">화력발전소</button>
+          </div>
         </div>
-        <div style="display:flex;gap:16px;justify-content:center;padding:8px;border-top:1px solid var(--border);">
-          <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text2);font-family:var(--font-m);"><div style="width:11px;height:11px;border-radius:50%;background:#378add;"></div>M3미만</div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text2);font-family:var(--font-m);"><div style="width:11px;height:11px;border-radius:50%;background:#fac775;"></div>M3~4</div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text2);font-family:var(--font-m);"><div style="width:11px;height:11px;border-radius:50%;background:#ff8c00;"></div>M4~5</div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text2);font-family:var(--font-m);"><div style="width:11px;height:11px;border-radius:50%;background:#ff2d2d;"></div>M5이상</div>
+        <div style="flex:1;position:relative;min-height:0;">
+          <svg id="dash-map" style="width:100%;height:100%;min-height:520px;display:block;"></svg>
+          <div id="map-tooltip" style="position:absolute;display:none;background:rgba(4,6,8,0.92);border:1px solid rgba(0,180,255,0.4);border-radius:5px;padding:8px 12px;pointer-events:none;z-index:20;font-family:var(--font-b);min-width:180px;max-width:240px;"></div>
+        </div>
+        <!-- 범례 -->
+        <div style="display:flex;gap:14px;justify-content:center;align-items:center;padding:7px;border-top:1px solid var(--border);flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);font-family:var(--font-m);"><div style="width:10px;height:10px;border-radius:50%;background:#378add;"></div>M3미만</div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);font-family:var(--font-m);"><div style="width:10px;height:10px;border-radius:50%;background:#fac775;"></div>M3~4</div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);font-family:var(--font-m);"><div style="width:10px;height:10px;border-radius:50%;background:#ff8c00;"></div>M4~5</div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);font-family:var(--font-m);"><div style="width:10px;height:10px;border-radius:50%;background:#ff2d2d;"></div>M5이상</div>
+          <div style="width:1px;height:14px;background:var(--border);"></div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:rgba(255,165,0,0.9);font-family:var(--font-m);">◇ 과거진도7↑</div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:#ff6b6b;font-family:var(--font-m);">⚛ 원전</div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:12px;color:#aaa;font-family:var(--font-m);">🏭 화력</div>
         </div>
       </div>
       <!-- 우측: 이력 목록 -->
@@ -1220,6 +1239,116 @@ function refreshAll(){
 }
 
 // ── 초기화 ──
+// ── 레이어 상태 ──
+const layerState = { quake:true, hist:true, nuclear:false, thermal:false };
+let plantsData = null;
+
+function toggleLayer(name){
+  layerState[name] = !layerState[name];
+  document.getElementById('btn-'+name).classList.toggle('active', layerState[name]);
+  refreshLayers();
+}
+
+async function loadPlants(){
+  if(plantsData) return plantsData;
+  try{
+    const r = await fetch('./data/plants.json');
+    plantsData = await r.json();
+  }catch(e){ plantsData = {nuclear:[],thermal:[]}; }
+  return plantsData;
+}
+
+function refreshLayers(){
+  if(!dashMapOk||!dashSvg||!dashProj) return;
+  // 진원지 레이어
+  dashSvg.selectAll('.dash-epi,.dash-ering').style('display', layerState.quake ? null : 'none');
+  // 과거진도7 레이어
+  dashSvg.selectAll('.layer-hist').style('display', layerState.hist ? null : 'none');
+  // 원전 레이어
+  dashSvg.selectAll('.layer-nuclear').style('display', layerState.nuclear ? null : 'none');
+  // 화력 레이어
+  dashSvg.selectAll('.layer-thermal').style('display', layerState.thermal ? null : 'none');
+}
+
+function drawHistLayer(){
+  if(!dashMapOk||!dashSvg||!dashProj) return;
+  dashSvg.selectAll('.layer-hist').remove();
+  const HISTORICAL_M7=[
+    {year:2024,name:'노토반도 지진',mag:7.6,lat:37.49,lon:137.27},
+    {year:2018,name:'홋카이도 이부리 동부',mag:6.7,lat:42.69,lon:141.93},
+    {year:2016,name:'구마모토 지진',mag:7.3,lat:32.75,lon:130.76},
+    {year:2011,name:'동일본 대지진',mag:9.0,lat:38.10,lon:142.86},
+    {year:1995,name:'한신·아와지 대지진',mag:7.3,lat:34.59,lon:135.04},
+  ];
+  const tooltip = document.getElementById('map-tooltip');
+  const svgEl = document.getElementById('dash-map');
+  HISTORICAL_M7.forEach(eq=>{
+    const [x,y]=dashProj([eq.lon,eq.lat]);
+    const r=9;
+    const g=dashSvg.append('g').attr('class','layer-hist').style('cursor','pointer')
+      .style('display', layerState.hist ? null : 'none');
+    g.append('polygon')
+      .attr('points',`${x},${y-r} ${x+r},${y} ${x},${y+r} ${x-r},${y}`)
+      .attr('fill','rgba(255,140,0,0.2)').attr('stroke','rgba(255,165,0,0.9)').attr('stroke-width',1.8);
+    g.append('line').attr('x1',x-r).attr('y1',y).attr('x2',x+r).attr('y2',y).attr('stroke','rgba(255,165,0,0.6)').attr('stroke-width',1);
+    g.append('line').attr('x1',x).attr('y1',y-r).attr('x2',x).attr('y2',y+r).attr('stroke','rgba(255,165,0,0.6)').attr('stroke-width',1);
+    g.on('mouseover',function(){
+      tooltip.innerHTML=`<div style="color:rgba(255,165,0,1);font-weight:700;font-size:13px;">${eq.year} ${eq.name}</div><div style="color:#aaa;font-size:12px;margin-top:3px;">M${eq.mag} · 진도 7</div>`;
+      const rect=svgEl.getBoundingClientRect();
+      const pr=svgEl.closest('.panel').getBoundingClientRect();
+      tooltip.style.left=(rect.left-pr.left+x+10)+'px';
+      tooltip.style.top=(rect.top-pr.top+y-10)+'px';
+      tooltip.style.display='block';
+    }).on('mouseout',function(){ tooltip.style.display='none'; });
+  });
+}
+
+async function drawPlantLayer(){
+  if(!dashMapOk||!dashSvg||!dashProj) return;
+  dashSvg.selectAll('.layer-nuclear,.layer-thermal').remove();
+  const plants = await loadPlants();
+  const tooltip = document.getElementById('map-tooltip');
+  const svgEl = document.getElementById('dash-map');
+
+  // 원전
+  (plants.nuclear||[]).forEach(p=>{
+    const [x,y]=dashProj([p.lon,p.lat]);
+    const statusColor = p.status==='再稼働'?'#ff4444': p.status==='廃炉'?'#888':'#ffaa00';
+    const g=dashSvg.append('g').attr('class','layer-nuclear').style('cursor','pointer')
+      .style('display', layerState.nuclear ? null : 'none');
+    g.append('circle').attr('cx',x).attr('cy',y).attr('r',7)
+      .attr('fill','rgba(255,60,60,0.15)').attr('stroke',statusColor).attr('stroke-width',1.5);
+    g.append('text').attr('x',x).attr('y',y+4).attr('text-anchor','middle')
+      .attr('font-size','8px').attr('fill',statusColor).attr('font-family','sans-serif').text('⚛');
+    g.on('mouseover',function(){
+      tooltip.innerHTML=`<div style="color:#ff6b6b;font-weight:700;font-size:13px;">${p.name}</div><div style="color:#aaa;font-size:12px;margin-top:3px;">${p.name_kr}</div><div style="color:${statusColor};font-size:12px;margin-top:2px;">${p.status} · ${p.operator}</div><div style="color:#888;font-size:11px;">${p.pref}</div>`;
+      const rect=svgEl.getBoundingClientRect();
+      const pr=svgEl.closest('.panel').getBoundingClientRect();
+      tooltip.style.left=(rect.left-pr.left+x+10)+'px';
+      tooltip.style.top=(rect.top-pr.top+y-10)+'px';
+      tooltip.style.display='block';
+    }).on('mouseout',function(){ tooltip.style.display='none'; });
+  });
+
+  // 화력
+  (plants.thermal||[]).forEach(p=>{
+    const [x,y]=dashProj([p.lon,p.lat]);
+    const g=dashSvg.append('g').attr('class','layer-thermal').style('cursor','pointer')
+      .style('display', layerState.thermal ? null : 'none');
+    g.append('rect').attr('x',x-5).attr('y',y-5).attr('width',10).attr('height',10)
+      .attr('fill','rgba(150,150,150,0.15)').attr('stroke','rgba(180,180,180,0.7)').attr('stroke-width',1.2)
+      .attr('transform',`rotate(45,${x},${y})`);
+    g.on('mouseover',function(){
+      tooltip.innerHTML=`<div style="color:#ccc;font-weight:700;font-size:13px;">${p.name}</div><div style="color:#aaa;font-size:12px;margin-top:3px;">${p.name_kr}</div><div style="color:#888;font-size:12px;margin-top:2px;">${p.fuel} · ${p.operator}</div>`;
+      const rect=svgEl.getBoundingClientRect();
+      const pr=svgEl.closest('.panel').getBoundingClientRect();
+      tooltip.style.left=(rect.left-pr.left+x+10)+'px';
+      tooltip.style.top=(rect.top-pr.top+y-10)+'px';
+      tooltip.style.display='block';
+    }).on('mouseout',function(){ tooltip.style.display='none'; });
+  });
+}
+
 // ── 대시보드 지도 ──
 let dashMapOk=false, dashSvg=null, dashProj=null;
 
@@ -1245,6 +1374,8 @@ async function initDashMap(){
       if(event.target.tagName === 'path') resetZoom();
     });
     renderDashMap(mapData);
+    drawHistLayer();
+    drawPlantLayer();
   }catch(e){console.error('지도 로드 실패',e);}
 }
 
