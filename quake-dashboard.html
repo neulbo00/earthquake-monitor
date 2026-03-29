@@ -787,7 +787,7 @@ function initDates() {
 }
 
 // ── API 데이터 로드 ──
-async function loadData(limit=500) {
+async function loadData(limit=100) {
   const res = await fetch(`https://api.p2pquake.net/v2/jma/quake?limit=${limit}&order=-1`);
   return await res.json();
 }
