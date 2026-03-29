@@ -90,6 +90,14 @@ body::after {
 .layer-btn:hover{border-color:var(--accent);color:var(--accent);}
 .layer-btn.active{background:rgba(0,180,255,0.15);border-color:var(--accent);color:var(--accent);}
 
+/* 진도 스펙트럼 바 (통계용) */
+.spectrum-bar-outer{padding:0 4px;}
+.spectrum-bar-inner{height:22px;border-radius:4px;position:relative;overflow:hidden;background:linear-gradient(90deg,#0c447c 0%,#185fa5 12%,#27500a 22%,#3b6d11 33%,#633806 44%,#854f0b 55%,#993c1d 64%,#a32d2d 73%,#791f1f 84%,#ff2d2d 100%);}
+.spectrum-needle-stat{position:absolute;top:-3px;bottom:-3px;width:4px;background:#fff;box-shadow:0 0 10px #fff;border-radius:2px;transition:left 0.8s cubic-bezier(.25,.8,.25,1);}
+.spectrum-ticks-stat{display:flex;justify-content:space-between;margin-top:4px;}
+.spectrum-ticks-stat span{font-family:var(--font-d);font-size:13px;color:var(--text2);transition:color .3s,font-size .3s;}
+.spectrum-ticks-stat span.active{color:#fff;font-size:15px;}
+
 .nav-tabs {
   display: flex; gap: 4px; margin-bottom: 24px;
   border-bottom: 1px solid var(--border);
@@ -538,29 +546,53 @@ input[type="range"]::-webkit-slider-thumb {
 
   <!-- ══ 통계 탭 ══ -->
   <div id="tab-stats" class="tab-content">
-    <div class="stats-row">
+    <!-- 통계 카드 -->
+    <div class="stats-row" style="margin-bottom:16px;">
       <div class="stat-card"><div class="stat-val" id="s-24h">—</div><div class="stat-label">24시간 발생</div></div>
       <div class="stat-card"><div class="stat-val" id="s-72h">—</div><div class="stat-label">72시간 발생</div></div>
       <div class="stat-card"><div class="stat-val" id="s-1w">—</div><div class="stat-label">1주일 발생</div></div>
       <div class="stat-card"><div class="stat-val" id="s-max">—</div><div class="stat-label">최대 규모 (1주)</div></div>
     </div>
 
+    <!-- 진도 스펙트럼 바 -->
+    <div class="panel" style="padding:12px 18px;margin-bottom:16px;">
+      <div class="panel-title" style="margin-bottom:8px;">최근 최대진도 스펙트럼 (JMA)</div>
+      <div class="spectrum-bar-outer">
+        <div class="spectrum-bar-inner">
+          <div class="spectrum-needle-stat" id="stat-spectrum-needle" style="left:0%"></div>
+        </div>
+        <div class="spectrum-ticks-stat">
+          <span id="sst-1">1</span><span id="sst-2">2</span><span id="sst-3">3</span><span id="sst-4">4</span>
+          <span id="sst-5l">5약</span><span id="sst-5u">5강</span><span id="sst-6l">6약</span><span id="sst-6u">6강</span><span id="sst-7">7</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 차트 2×2 -->
     <div class="chart-grid">
       <div class="panel chart-box">
         <div class="panel-title">규모별 발생 분포 (최근 100건)</div>
-        <canvas id="chart-mag" height="200"></canvas>
+        <canvas id="chart-mag" height="180"></canvas>
       </div>
-      <div class="panel chart-box">
-        <div class="panel-title">시간대별 발생 건수 (최근 7일)</div>
-        <canvas id="chart-hour" height="200"></canvas>
-      </div>
-      <div class="panel chart-box">
-        <div class="panel-title">일별 발생 건수 추이 (최근 30일)</div>
-        <canvas id="chart-daily" height="200"></canvas>
-      </div>
-      <div class="panel chart-box">
+      <div class="panel chart-box" style="grid-column:span 1;">
         <div class="panel-title">진도별 발생 비율 (최근 100건)</div>
-        <canvas id="chart-shindo" height="200"></canvas>
+        <div style="display:flex;align-items:center;justify-content:center;height:180px;">
+          <canvas id="chart-shindo" style="max-width:380px;max-height:180px;"></canvas>
+        </div>
+      </div>
+      <div class="panel chart-box" style="grid-column:span 2;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div class="panel-title" style="margin-bottom:0;" id="hour-chart-title">시간대별 발생 건수 (최근 7일)</div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="setHourRange(7)"  id="btn-7d"  class="layer-btn active">7일</button>
+            <button onclick="setHourRange(30)" id="btn-30d" class="layer-btn">30일</button>
+          </div>
+        </div>
+        <canvas id="chart-hour" height="160"></canvas>
+      </div>
+      <div class="panel chart-box" style="grid-column:span 2;">
+        <div class="panel-title">일별 발생 건수 추이 (최근 30일)</div>
+        <canvas id="chart-daily" height="160"></canvas>
       </div>
     </div>
   </div>
@@ -1054,44 +1086,85 @@ async function loadStatsData(){
 function renderCharts(){
   loadStatsData().then(raw=>{
     const now=Date.now();
+    const dRange=raw.filter(q=>{try{return now-new Date(q.earthquake?.time||q.time)<hourRange*86400000;}catch(e){return false;}});
     const d1w=raw.filter(q=>{try{return now-new Date(q.earthquake?.time||q.time)<604800000;}catch(e){return false;}});
     const d100=raw.slice(0,100);
 
+    // 스펙트럼 바: 최근 최대진도
+    if(raw.length>0){
+      const sc=raw[0].earthquake?.maxScale?(SM[String(raw[0].earthquake.maxScale)]||'1'):'1';
+      updateSpectrumStat(sc);
+    }
+
     drawMagChart(d100);
-    drawHourChart(d1w);
+    drawHourChart(dRange);
     drawDailyChart(raw);
     drawShindoChart(d100);
   });
 }
 
+// 공통 Chart.js 디졸브 애니메이션 옵션
+const chartAnim = { duration:800, easing:'easeInOutQuart' };
 const chartDefaults={
   color:'rgba(220,240,255,0.7)',
-  grid:'rgba(0,180,255,0.1)',
+  grid:'rgba(0,180,255,0.08)',
   font:'Share Tech Mono',
 };
-
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+// 스펙트럼 바 업데이트
+const SCALE_POS={'1':6,'2':17,'3':28,'4':39,'5약':50,'5강':61,'6약':72,'6강':83,'7':96};
+const SCALE_IDS={'1':'sst-1','2':'sst-2','3':'sst-3','4':'sst-4','5약':'sst-5l','5강':'sst-5u','6약':'sst-6l','6강':'sst-6u','7':'sst-7'};
+function updateSpectrumStat(sc){
+  const needle=document.getElementById('stat-spectrum-needle');
+  if(needle) needle.style.left=(SCALE_POS[sc]??0)+'%';
+  Object.entries(SCALE_IDS).forEach(([k,id])=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.toggle('active',k===sc);
+  });
+}
 
 function drawMagChart(data){
   destroyChart('mag');
-  const bins={'3미만':0,'3~4':0,'4~5':0,'5~6':0,'6이상':0};
+  const bins={'M3미만':0,'M3~4':0,'M4~5':0,'M5~6':0,'M6↑':0};
   data.forEach(q=>{
     const m=q.earthquake?.hypocenter?.magnitude||0;
-    if(m<3)bins['3미만']++;
-    else if(m<4)bins['3~4']++;
-    else if(m<5)bins['4~5']++;
-    else if(m<6)bins['5~6']++;
-    else bins['6이상']++;
+    if(m<3)bins['M3미만']++;
+    else if(m<4)bins['M3~4']++;
+    else if(m<5)bins['M4~5']++;
+    else if(m<6)bins['M5~6']++;
+    else bins['M6↑']++;
   });
   charts['mag']=new Chart(document.getElementById('chart-mag'),{
     type:'bar',
     data:{
       labels:Object.keys(bins),
       datasets:[{data:Object.values(bins),
-        backgroundColor:['rgba(55,138,221,0.7)','rgba(250,199,117,0.7)','rgba(255,140,0,0.7)','rgba(180,40,40,0.7)','rgba(255,45,45,0.9)'],
-        borderRadius:4,borderWidth:0}]
+        backgroundColor:['rgba(55,138,221,0.75)','rgba(250,199,117,0.75)','rgba(255,140,0,0.75)','rgba(180,40,40,0.8)','rgba(255,45,45,0.9)'],
+        borderRadius:5,borderWidth:0}]
     },
-    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:12}},grid:{color:chartDefaults.grid}},y:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:11}},grid:{color:chartDefaults.grid}}}}
+    options:{
+      animation:chartAnim,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:12}},grid:{color:chartDefaults.grid},border:{color:'transparent'}},
+        y:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:11}},grid:{color:chartDefaults.grid},border:{color:'transparent'}}
+      }
+    }
+  });
+}
+
+// 시간대별: 범위 선택 가능 (7일/30일), 색상 그라데이션
+let hourRange=7;
+function setHourRange(days){
+  hourRange=days;
+  document.getElementById('btn-7d').classList.toggle('active',days===7);
+  document.getElementById('btn-30d').classList.toggle('active',days===30);
+  document.getElementById('hour-chart-title').textContent=`시간대별 발생 건수 (최근 ${days}일)`;
+  loadStatsData().then(raw=>{
+    const now=Date.now();
+    const filtered=raw.filter(q=>{try{return now-new Date(q.earthquake?.time||q.time)<days*86400000;}catch(e){return false;}});
+    drawHourChart(filtered);
   });
 }
 
@@ -1102,11 +1175,31 @@ function drawHourChart(data){
     const t=new Date(q.earthquake?.time||q.time||0);
     hours[t.getHours()]++;
   });
+  // 시간대별 색상 그라데이션: 새벽(파랑)→오전(청록)→낮(노랑)→저녁(주황)→밤(파랑)
+  const hourColors=hours.map((_,i)=>{
+    if(i>=0&&i<6)  return 'rgba(30,80,180,0.75)';   // 새벽
+    if(i>=6&&i<12) return 'rgba(0,180,255,0.75)';   // 오전
+    if(i>=12&&i<17)return 'rgba(250,199,117,0.8)';  // 낮
+    if(i>=17&&i<21)return 'rgba(255,140,0,0.8)';    // 저녁
+    return                 'rgba(60,60,160,0.75)';   // 밤
+  });
   charts['hour']=new Chart(document.getElementById('chart-hour'),{
     type:'bar',
-    data:{labels:[...Array(24)].map((_,i)=>i+'시'),
-      datasets:[{data:hours,backgroundColor:'rgba(0,180,255,0.5)',borderRadius:3,borderWidth:0}]},
-    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:10}},grid:{color:chartDefaults.grid}},y:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:11}},grid:{color:chartDefaults.grid}}}}
+    data:{
+      labels:[...Array(24)].map((_,i)=>`${i}시`),
+      datasets:[{data:hours,backgroundColor:hourColors,borderRadius:4,borderWidth:0}]
+    },
+    options:{
+      animation:chartAnim,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>`${ctx.raw}건`}}
+      },
+      scales:{
+        x:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:10},maxRotation:0},grid:{color:chartDefaults.grid},border:{color:'transparent'}},
+        y:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:11}},grid:{color:chartDefaults.grid},border:{color:'transparent'}}
+      }
+    }
   });
 }
 
@@ -1124,30 +1217,60 @@ function drawDailyChart(data){
     if(dayMap[k]!==undefined) dayMap[k]++;
   });
   const labels=Object.keys(dayMap).map(k=>k.slice(5));
+  const vals=Object.values(dayMap);
   charts['daily']=new Chart(document.getElementById('chart-daily'),{
     type:'line',
-    data:{labels,datasets:[{data:Object.values(dayMap),
-      borderColor:'rgba(0,180,255,0.8)',backgroundColor:'rgba(0,180,255,0.08)',
+    data:{labels,datasets:[{
+      data:vals,
+      borderColor:'rgba(0,180,255,0.8)',
+      backgroundColor:'rgba(0,180,255,0.07)',
       pointRadius:3,pointBackgroundColor:'rgba(0,180,255,0.9)',
-      tension:0.3,fill:true,borderWidth:1.5}]},
-    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:10},maxTicksLimit:15},grid:{color:chartDefaults.grid}},y:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:11}},grid:{color:chartDefaults.grid}}}}
+      tension:0.35,fill:true,borderWidth:2
+    }]},
+    options:{
+      animation:chartAnim,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:10},maxTicksLimit:15},grid:{color:chartDefaults.grid},border:{color:'transparent'}},
+        y:{ticks:{color:chartDefaults.color,font:{family:chartDefaults.font,size:11}},grid:{color:chartDefaults.grid},border:{color:'transparent'},min:0}
+      }
+    }
   });
 }
 
 function drawShindoChart(data){
   destroyChart('shindo');
-  const bins={'1':0,'2':0,'3':0,'4':0,'5약':0,'5강':0,'6약':0,'6강':0,'7':0};
+  // 진도 순서: 1→7 (낮은 것부터)
+  const labels=['1','2','3','4','5약','5강','6약','6강','7'];
+  const bins=Object.fromEntries(labels.map(k=>[k,0]));
   data.forEach(q=>{
     const sc=q.earthquake?.maxScale;
     if(sc){ const s=SM[String(sc)]; if(s&&bins[s]!==undefined) bins[s]++; }
   });
+  const vals=labels.map(k=>bins[k]);
+  const colors=['#0c447c','#185fa5','#27500a','#633806','#854f0b','#993c1d','#a32d2d','#791f1f','#ff2d2d'];
   charts['shindo']=new Chart(document.getElementById('chart-shindo'),{
     type:'doughnut',
-    data:{labels:Object.keys(bins),
-      datasets:[{data:Object.values(bins),
-        backgroundColor:['#0c447c','#185fa5','#27500a','#633806','#854f0b','#993c1d','#a32d2d','#791f1f','#ff2d2d'],
-        borderWidth:1,borderColor:'rgba(0,0,0,0.3)'}]},
-    options:{plugins:{legend:{position:'right',labels:{color:chartDefaults.color,font:{family:chartDefaults.font,size:12},boxWidth:14}}}},
+    data:{
+      labels,
+      datasets:[{data:vals,backgroundColor:colors,borderWidth:1,borderColor:'rgba(0,0,0,0.3)',hoverOffset:6}]
+    },
+    options:{
+      animation:chartAnim,
+      cutout:'55%',
+      plugins:{
+        legend:{
+          position:'right',
+          labels:{
+            color:chartDefaults.color,
+            font:{family:chartDefaults.font,size:12},
+            boxWidth:12,padding:8,
+            filter:(item)=>vals[item.index]>0  // 0건인 진도는 범례 숨김
+          }
+        },
+        tooltip:{callbacks:{label:ctx=>`진도${ctx.label}: ${ctx.raw}건`}}
+      }
+    }
   });
 }
 
