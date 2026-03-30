@@ -1615,7 +1615,7 @@ async function initDashMap(){
     const tp=await d3.json('https://cdn.jsdelivr.net/npm/datamaps@0.5.10/src/js/data/jpn.topo.json');
     dashSvg=d3.select('#dash-map').attr('viewBox',`0 0 ${W} ${H}`);
     dashMapW=W; dashMapH=H;
-    dashProj=d3.geoMercator().center([133.5,36.5]).scale(W*2.2).translate([W*0.49,H*0.47]);
+    dashProj=d3.geoMercator().center([133.5,36.5]).scale(W*2.2).translate([W*0.49,H*0.42]);
     dashSvg.selectAll('path.land')
       .data(topojson.feature(tp,tp.objects.jpn).features).join('path')
       .attr('class','land').attr('d',d3.geoPath(dashProj))
@@ -1709,10 +1709,26 @@ function zoomToItem(i){
   const q=_mapItems[i];
   if(!q||!dashProj)return;
   const h=q.earthquake.hypocenter;
-  const [x,y]=dashProj([h.longitude,h.latitude]);
+  if(!h||!h.longitude||!h.latitude||h.longitude===0)return;
+  const proj=dashProj([h.longitude,h.latitude]);
+  if(!proj)return;
+  const [x,y]=proj;
   zoomToEpicenter(q,h,x,y);
-}
+  }
 
+function zoomToEpicenter(q,h,x,y){
+  if(!dashSvg||!dashProj)return;
+  const W=dashMapW, H=dashMapH;
+  const scale=3.5;
+  const vx=x-W/scale/2, vy=y-H/scale/2;
+  const vw=W/scale, vh=H/scale;
+  const svgEl=document.getElementById('dash-map');
+  if(svgEl) svgEl.setAttribute('viewBox',`${vx} ${vy} ${vw} ${vh}`);
+  currentViewBox={vx,vy,vw,vh};
+  applyCanvasTransform();
+  zoomed=true;
+}
+  
 let zoomed=false;
 let currentViewBox=null;
 let dashMapW=700, dashMapH=560;  // 전역 선언
@@ -1734,12 +1750,13 @@ setTimeout(applyCanvasTransform, 750);
 // resetZoom 수정:
 function resetZoom(){
   if(!dashSvg)return;
-  dashSvg.transition().duration(500).attr('viewBox',`0 0 ${dashMapW} ${dashMapH}`);
+  const svgEl=document.getElementById('dash-map');
+  if(svgEl) svgEl.setAttribute('viewBox',`0 0 ${dashMapW} ${dashMapH}`);
   currentViewBox=null;
-  setTimeout(applyCanvasTransform, 550);
+  applyCanvasTransform();
   zoomed=false;
 }
-
+  
 const ssMap=document.createElement('style');
 ssMap.textContent='@keyframes dashRing{0%{r:9;opacity:.8;stroke-width:2}100%{r:28;opacity:0;stroke-width:.5}}';
 document.head.appendChild(ssMap);
