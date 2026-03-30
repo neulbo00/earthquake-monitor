@@ -364,6 +364,7 @@ body::before{content:'';position:fixed;inset:0;
       <div class="legend-item"><div class="legend-dot" style="background:#ff8c00"></div>M4~5</div>
       <div class="legend-item"><div class="legend-dot" style="background:#ff2d2d"></div>M5이상</div>
       <div class="legend-item"><div style="width:10px;height:10px;border:1.5px solid rgba(255,165,0,0.9);transform:rotate(45deg);flex-shrink:0;"></div>과거 진도 7↑</div>
+      <div class="legend-item"><div style="width:20px;height:0;border-top:2.5px dashed rgba(255,120,0,0.85);flex-shrink:0;margin-right:2px;"></div>난카이 트로프</div>
     </div>
   </div>
 
@@ -554,6 +555,7 @@ async function initMap(){
       .attr('fill','#0d1a24').attr('stroke','rgba(0,180,255,0.25)').attr('stroke-width','0.7');
     mapOk=true;
     drawHistorical(); // 과거 진도7 지진 표시
+    drawNankai();     // 난카이 트로프
   }catch(e){console.error('지도 실패',e);}
 }
 
@@ -565,6 +567,41 @@ const HISTORICAL_M7=[
   {year:2011,name:'동일본 대지진',       mag:9.0,lat:38.10,lon:142.86,desc:'관측사상 최대, 거대 쓰나미 및 원전사고'},
   {year:1995,name:'한신·아와지 대지진',  mag:7.3,lat:34.59,lon:135.04,desc:'고베 직격, 6,434명 사망'},
 ];
+
+// ── 난카이 트로프 (南海トラフ) ──
+const NANKAI_COORDS=[
+  // 규슈 남서 → 시코쿠 앞바다 → 기이반도 앞바다 → 도카이 앞바다 → 이즈 앞바다
+  [130.0,31.0],[130.8,31.2],[131.5,31.5],[132.2,31.8],
+  [132.8,32.2],[133.5,32.5],[134.2,32.8],[135.0,33.2],
+  [135.8,33.5],[136.5,33.8],[137.2,34.0],[137.8,34.2],
+  [138.4,34.3],[139.0,34.3],[139.5,34.2],[140.0,33.8],
+];
+
+function drawNankai(){
+  if(!mapOk||!mSvg||!mProj)return;
+  mSvg.selectAll('.nankai').remove();
+  const pts=NANKAI_COORDS.map(([lon,lat])=>mProj([lon,lat]));
+  const line=pts.map((p,i)=>`${i===0?'M':'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  // 글로우 효과용 넓은 선
+  mSvg.append('path').attr('class','nankai')
+    .attr('d',line).attr('fill','none')
+    .attr('stroke','rgba(255,80,0,0.15)').attr('stroke-width',8)
+    .attr('stroke-linecap','round').attr('stroke-linejoin','round');
+  // 메인 점선
+  mSvg.append('path').attr('class','nankai')
+    .attr('d',line).attr('fill','none')
+    .attr('stroke','rgba(255,120,0,0.85)').attr('stroke-width',2.2)
+    .attr('stroke-dasharray','7,4')
+    .attr('stroke-linecap','round').attr('stroke-linejoin','round');
+  // 라벨
+  const mid=pts[Math.floor(pts.length/2)];
+  mSvg.append('text').attr('class','nankai')
+    .attr('x',mid[0]+5).attr('y',mid[1]-8)
+    .attr('fill','rgba(255,150,50,0.9)')
+    .attr('font-size','11px').attr('font-family','Noto Sans KR,sans-serif')
+    .attr('font-weight','700').attr('letter-spacing','1px')
+    .text('南海トラフ');
+}
 
 function drawHistorical(){
   if(!mapOk||!mSvg||!mProj)return;
