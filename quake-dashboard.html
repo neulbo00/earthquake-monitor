@@ -931,43 +931,66 @@ async function loadDataSmart(limit=100) {
     return acc.slice(0, limit);
   }
 
-  // ── 병합 1: P2PQuake 진도(maxScale)로 축적 데이터 보완 ──
-  // P2PQuake 이벤트를 발생시각(분 단위)으로 인덱싱
-  const liveIndex = new Map();
+  // ── P2PQuake 중복 제거: 같은 분(minute)에 여러 건 있으면 가장 좋은 것만 남김 ──
+  // (P2PQuake는 초보·수정·진도 보고를 각각 전송해서 동일 지진이 3~4건 들어옴)
+  const liveDeduped = new Map();
   live.forEach(q => {
+    const key = Math.floor(new Date(q.earthquake?.time || q.time || 0).getTime() / 60000);
+    const prev = liveDeduped.get(key);
+    if(!prev) { liveDeduped.set(key, q); return; }
+    // 좌표+진도 모두 있는 것 우선
+    const score = q => ((q.earthquake?.hypocenter?.latitude||0)!==0?2:0) + ((q.earthquake?.maxScale||0)>0?1:0);
+    if(score(q) > score(prev)) liveDeduped.set(key, q);
+  });
+  const liveBest = Array.from(liveDeduped.values());
+
+  // P2PQuake를 시각(분)으로 인덱싱
+  const liveIndex = new Map();
+  liveBest.forEach(q => {
     const key = Math.floor(new Date(q.earthquake?.time || q.time || 0).getTime() / 60000);
     liveIndex.set(key, q);
   });
 
+  // ── 축적 데이터 보완 & P2PQuake 대체 ──
+  const usedLiveKeys = new Set();
+  const result = [];
+
   acc.forEach(q => {
-    if((q.earthquake?.maxScale || 0) > 0) return; // 이미 진도 있음
     const key = Math.floor(new Date(q.earthquake?.time || q.time || 0).getTime() / 60000);
-    // ±2분 이내 P2PQuake 이벤트에서 진도 보완
+    let matched = null;
     for(let d = -2; d <= 2; d++) {
       const lq = liveIndex.get(key + d);
-      if(lq && (lq.earthquake?.maxScale || 0) > 0) {
-        q.earthquake.maxScale = lq.earthquake.maxScale;
-        break;
+      if(lq) { matched = lq; usedLiveKeys.add(key + d); break; }
+    }
+    if(matched) {
+      const noCoord = !(q.earthquake?.hypocenter?.latitude) || q.earthquake.hypocenter.latitude === 0;
+      const liveHasCoord = (matched.earthquake?.hypocenter?.latitude || 0) !== 0;
+      // 축적 데이터 좌표가 없고 P2PQuake에 좌표 있으면 → P2PQuake 버전으로 교체
+      if(noCoord && liveHasCoord) {
+        result.push(matched);
+        return;
+      }
+      // 진도만 없으면 P2PQuake에서 보완
+      if(!(q.earthquake?.maxScale > 0) && (matched.earthquake?.maxScale || 0) > 0) {
+        q.earthquake.maxScale = matched.earthquake.maxScale;
       }
     }
+    result.push(q);
   });
 
-  // ── 병합 2: 축적에 없는 최신 P2PQuake 이벤트 앞에 추가 (속보 대응) ──
-  const accKeySet = new Set(
-    acc.map(q => Math.floor(new Date(q.earthquake?.time || q.time || 0).getTime() / 60000))
-  );
-  const freshItems = live.filter(q => {
+  // ── 축적에 없는 최신 P2PQuake 이벤트 추가 (속보) ──
+  liveBest.forEach(q => {
     const key = Math.floor(new Date(q.earthquake?.time || q.time || 0).getTime() / 60000);
-    // 축적 데이터에 ±3분 이내 항목이 없으면 신규로 간주
-    return ![-3,-2,-1,0,1,2,3].some(d => accKeySet.has(key + d));
+    if(!usedLiveKeys.has(key)) result.push(q);
   });
 
-  const merged = [...freshItems, ...acc]
-    .sort((a,b) => new Date(b.earthquake?.time||b.time||0) - new Date(a.earthquake?.time||a.time||0))
-    .slice(0, limit);
+  result.sort((a,b) =>
+    new Date(b.earthquake?.time||b.time||0) - new Date(a.earthquake?.time||a.time||0)
+  );
 
+  const merged = result.slice(0, limit);
   const hasScale = merged.filter(q => (q.earthquake?.maxScale || 0) > 0).length;
-  console.log(`[데이터] 병합완료 ${merged.length}건 (속보+${freshItems.length} 진도있음:${hasScale})`);
+  console.log(`[데이터] 병합완료 ${merged.length}건 진도있음:${hasScale}건`);
   document.getElementById('data-source-badge').textContent =
     `축적+실시간 ${merged.length}건 · 진도 ${hasScale}건`;
   document.getElementById('data-source-badge').className = 'badge badge-info';
