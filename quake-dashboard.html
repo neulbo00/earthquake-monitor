@@ -911,21 +911,67 @@ function scaleStrToNum(s) {
 }
 
 async function loadDataSmart(limit=100) {
-  const acc = await loadAccumulated();
-  if(acc && acc.length > 0) {
-    const hasScale = acc.filter(q=>q.earthquake?.maxScale>0).length;
-    const hasCoord = acc.filter(q=>q.earthquake?.hypocenter?.latitude!==0).length;
-    console.log(`[데이터] 진도있음:${hasScale}/${acc.length} 좌표있음:${hasCoord}/${acc.length}`);
-    // 좌표·진도 있는 데이터가 10% 이상이면 축적 데이터 사용
-    if(hasScale > acc.length * 0.1 || hasCoord > acc.length * 0.1) {
-      return acc.slice(0, limit);
-    }
-    // 없으면 실시간 API 폴백
-    console.log('[데이터] 좌표/진도 부족 → 실시간 API 사용 (collect.py 실행 후 개선됨)');
-    document.getElementById('data-source-badge').textContent = '실시간 API (축적 데이터 보완 중)';
+  // 항상 두 소스 병렬 로드 (축적=좌표·이력, P2PQuake=진도·속보)
+  const [acc, live] = await Promise.all([
+    loadAccumulated().catch(()=>null),
+    loadData(limit).catch(()=>null)
+  ]);
+
+  // 축적 데이터 없으면 실시간만
+  if(!acc || acc.length === 0) {
+    document.getElementById('data-source-badge').textContent = '실시간 API';
     document.getElementById('data-source-badge').className = 'badge badge-warn';
+    return live || [];
   }
-  return await loadData(limit);
+
+  // 실시간 없으면 축적만
+  if(!live || live.length === 0) {
+    document.getElementById('data-source-badge').textContent = `축적 데이터 ${acc.length}건`;
+    document.getElementById('data-source-badge').className = 'badge badge-info';
+    return acc.slice(0, limit);
+  }
+
+  // ── 병합 1: P2PQuake 진도(maxScale)로 축적 데이터 보완 ──
+  // P2PQuake 이벤트를 발생시각(분 단위)으로 인덱싱
+  const liveIndex = new Map();
+  live.forEach(q => {
+    const key = Math.floor(new Date(q.earthquake?.time || q.time || 0).getTime() / 60000);
+    liveIndex.set(key, q);
+  });
+
+  acc.forEach(q => {
+    if((q.earthquake?.maxScale || 0) > 0) return; // 이미 진도 있음
+    const key = Math.floor(new Date(q.earthquake?.time || q.time || 0).getTime() / 60000);
+    // ±2분 이내 P2PQuake 이벤트에서 진도 보완
+    for(let d = -2; d <= 2; d++) {
+      const lq = liveIndex.get(key + d);
+      if(lq && (lq.earthquake?.maxScale || 0) > 0) {
+        q.earthquake.maxScale = lq.earthquake.maxScale;
+        break;
+      }
+    }
+  });
+
+  // ── 병합 2: 축적에 없는 최신 P2PQuake 이벤트 앞에 추가 (속보 대응) ──
+  const accKeySet = new Set(
+    acc.map(q => Math.floor(new Date(q.earthquake?.time || q.time || 0).getTime() / 60000))
+  );
+  const freshItems = live.filter(q => {
+    const key = Math.floor(new Date(q.earthquake?.time || q.time || 0).getTime() / 60000);
+    // 축적 데이터에 ±3분 이내 항목이 없으면 신규로 간주
+    return ![-3,-2,-1,0,1,2,3].some(d => accKeySet.has(key + d));
+  });
+
+  const merged = [...freshItems, ...acc]
+    .sort((a,b) => new Date(b.earthquake?.time||b.time||0) - new Date(a.earthquake?.time||a.time||0))
+    .slice(0, limit);
+
+  const hasScale = merged.filter(q => (q.earthquake?.maxScale || 0) > 0).length;
+  console.log(`[데이터] 병합완료 ${merged.length}건 (속보+${freshItems.length} 진도있음:${hasScale})`);
+  document.getElementById('data-source-badge').textContent =
+    `축적+실시간 ${merged.length}건 · 진도 ${hasScale}건`;
+  document.getElementById('data-source-badge').className = 'badge badge-info';
+  return merged;
 }
 
 // ── 검색 실행 ──
