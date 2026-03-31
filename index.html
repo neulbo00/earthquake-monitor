@@ -830,8 +830,19 @@ function startRegionScroll(){
 
 async function loadData(){
   try{
-    const data=await fetch('https://api.p2pquake.net/v2/history?codes=551&limit=20').then(r=>r.json());
-    if(!data?.length)return;
+    const _raw=await fetch('https://api.p2pquake.net/v2/history?codes=551&limit=20').then(r=>r.json());
+    if(!_raw?.length)return;
+    // P2PQuake 중복 제거: 동일 지진 초보·수정·진도 3~4건 → 발생시각(분) 기준 최우선 1건
+    const _dm=new Map();
+    _raw.forEach(q=>{
+      const key=Math.floor(new Date(q.earthquake?.time||q.time||0).getTime()/60000);
+      const prev=_dm.get(key);
+      if(!prev){_dm.set(key,q);return;}
+      const sc=q=>((q.earthquake?.hypocenter?.latitude||0)!==0?2:0)+((q.earthquake?.maxScale||0)>0?1:0);
+      if(sc(q)>sc(prev))_dm.set(key,q);
+    });
+    const data=Array.from(_dm.values())
+      .sort((a,b)=>new Date(b.earthquake?.time||b.time||0)-new Date(a.earthquake?.time||a.time||0));
 
     // 기간별 카운트: 페이지네이션으로 충분한 데이터 수집
     // P2PQuake는 1주일 이상 offset 불안정 → jma/quake API 병용
@@ -907,7 +918,7 @@ async function loadData(){
       const dh=d.earthquake?.hypocenter;
       const m=dh?.magnitude?dh.magnitude.toFixed(1):'—';
       const dsc=d.earthquake?.maxScale?(SM[String(d.earthquake.maxScale)]||'—'):'—';
-      const t=d.time?new Date(d.time):null;
+      const t=new Date(d.earthquake?.time||d.time||0);
       const p=n=>String(n).padStart(2,'0');
       const dtStr=t?`${p(t.getMonth()+1)}/${p(t.getDate())} ${p(t.getHours())}:${p(t.getMinutes())}`:'—';
       return `<div class="eq-row fi">
