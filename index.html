@@ -797,8 +797,6 @@ let subtitleHideTimer=null;  // 자막 1시간 타이머
 let nuclearHideTimer=null;  // 원전 정보 1시간 타이머
 let plantsData=[];           // plants.json 데이터
 let tickerItems=[];       // 실제 렌더링 배열 (지진+뉴스 합산)
-let quakeTickerItems=[];  // 지진 전용 보관
-let newsItems=[];         // 뉴스 전용 보관
 let tickerPos=0;          // 현재 스크롤 위치
 let tickerRAF=null;       // requestAnimationFrame ID
 let tickerSpeed=0.5;      // px/frame
@@ -822,9 +820,6 @@ function initTicker(){
   }
   tickerRAF=requestAnimationFrame(animate);
 }
-
-let quakeTickerItems=[];  // 지진 전용 보관
-let newsItems=[];         // 뉴스 전용 보관
 
 // ─── 뉴스 티커 ─────────────────────────────────────────────────
 async function fetchQuakeNews(){
