@@ -931,7 +931,14 @@ async function loadData(){
       if(sc(q)>sc(prev))_dm.set(key,q);
     });
     const data=Array.from(_dm.values())
-      .sort((a,b)=>new Date(b.earthquake?.time||b.time||0)-new Date(a.earthquake?.time||a.time||0));
+      .sort((a,b)=>new Date(b.earthquake?.time||b.time||0)-new Date(a.earthquake?.time||a.time||0))
+      .filter(q=>{
+        // 일본 영역 외 진원지 제외 (lat 20~50°N, lon 118~155°E)
+        const lat=q.earthquake?.hypocenter?.latitude||0;
+        const lon=q.earthquake?.hypocenter?.longitude||0;
+        if(lat===0&&lon===0) return (q.earthquake?.maxScale||0)>0; // 좌표 불명: 진도 측정된 것만
+        return lat>=20&&lat<=50&&lon>=118&&lon<=155;
+      });
 
     // 기간별 카운트: 페이지네이션으로 충분한 데이터 수집
     // P2PQuake는 1주일 이상 offset 불안정 → jma/quake API 병용
