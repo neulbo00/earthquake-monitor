@@ -1405,9 +1405,27 @@ function saveSettings(){
   };
   localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));
   const msg=document.getElementById('save-msg');
-  msg.textContent='✓ 설정이 저장되었습니다 ('+new Date().toLocaleTimeString('ko-KR')+')';
-  msg.className='save-msg ok';
-  setTimeout(()=>{msg.textContent='※ 설정은 localStorage에 저장됩니다. 방송용 페이지에 수동으로 반영해주세요.';msg.className='save-msg';},3000);
+  // Flask 서버에도 동기화 (OBS index.html 연동)
+  const broadcastKeys={ttsShindo:s.ttsShindo,alertShindo:s.alertShindo,alertMag:s.alertMag,
+    sound:s.sound,bgmVol:s.bgmVol,ttsRepeat:s.ttsRepeat,tsunamiInterval:s.tsunamiInterval,koreanLoc:s.koreanLoc};
+  fetch('http://localhost:8765/quake-settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(broadcastKeys)})
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.ok){
+        msg.textContent='✓ 설정 저장 + 방송용 페이지에 반영됨 ('+new Date().toLocaleTimeString('ko-KR')+')';
+        msg.className='save-msg ok';
+        setTimeout(()=>{msg.textContent='※ 설정은 localStorage + 로컬 서버에 저장됩니다 (방송용 자동 연동).';msg.className='save-msg';},4000);
+      } else {
+        msg.textContent='✓ 로컬 저장 완료 (서버 미응답 — OBS 실행 시 자동 반영)';
+        msg.className='save-msg ok';
+        setTimeout(()=>{msg.textContent='※ 서버 연결 불가 시 localStorage에만 저장됩니다.';msg.className='save-msg';},4000);
+      }
+    })
+    .catch(()=>{
+      msg.textContent='✓ 로컬 저장 완료 (서버 미연결 — OBS 실행 시 자동 반영)';
+      msg.className='save-msg ok';
+      setTimeout(()=>{msg.textContent='※ 로컬 서버가 꺼져있을 때는 localStorage에만 저장됩니다.';msg.className='save-msg';},4000);
+    });
   showToast('설정 저장 완료 ✓');
   if(s.autoRefresh) setupAutoRefresh(parseInt(s.refresh));
   else clearAutoRefresh();
