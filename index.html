@@ -1130,7 +1130,7 @@ async function loadData(){
           const u=new SpeechSynthesisUtterance(krText);u.lang='ko-KR';u.rate=0.9;
           u.onend=()=>{
             const u2=new SpeechSynthesisUtterance(jpText);u2.lang='ja-JP';u2.rate=0.9;
-            u2.onend=()=>{if(subtitleHideTimer)clearTimeout(subtitleHideTimer);subtitleHideTimer=setTimeout(()=>{sub.classList.remove('active');sub.classList.remove('pos-top');},3600000);};
+            u2.onend=()=>{if(subtitleHideTimer)clearTimeout(subtitleHideTimer);subtitleHideTimer=setTimeout(()=>{sub.classList.remove('active');sub.classList.remove('pos-top');},getSubtitleDuration(sc));};
             window.speechSynthesis.speak(u2);
           };
           window.speechSynthesis.speak(u);
@@ -1320,7 +1320,13 @@ function playAlertSound(level){
   gain.gain.linearRampToValueAtTime(0,audioCtx.currentTime+endTime+0.3);
 }
 
-function speakAndSubtitle(krText,jpText,level){
+// ─── 자막 표시 시간 (진도별) ────────────────────────────────────
+function getSubtitleDuration(sc){
+  if(!sc||sc==='—'||sc==='1'||sc==='2') return 300000;   // 진도3 미만 → 5분
+  if(sc==='3') return 1800000;                             // 진도3 → 30분
+  return 3600000;                                          // 진도4 이상 → 1시간
+}
+function speakAndSubtitle(krText,jpText,level,sc){
   if(!window.speechSynthesis)return;
   const ttsDelay=level==='critical'?2200:1800;
   const sub=document.getElementById('tts-subtitle');
@@ -1332,7 +1338,7 @@ function speakAndSubtitle(krText,jpText,level){
   function speak(){
     if(repeat>=BCAST.ttsRepeat){
       if(subtitleHideTimer)clearTimeout(subtitleHideTimer);
-      subtitleHideTimer=setTimeout(()=>{sub.classList.remove('active');sub.classList.remove('pos-top');},3600000);
+      subtitleHideTimer=setTimeout(()=>{sub.classList.remove('active');sub.classList.remove('pos-top');},getSubtitleDuration(sc));
       return;
     }
     repeat++;
@@ -1405,7 +1411,7 @@ function triggerAlert(level,locName,mag,sc,timeStr){
     jpText=`地震警報。${timeStr}。${locName}、震度${sc}、マグニチュード${mag}。`;
   }
   playAlertSound(level);
-  speakAndSubtitle(krText,jpText,level);
+  speakAndSubtitle(krText,jpText,level,sc);
 }
 
 document.addEventListener('click',()=>{
